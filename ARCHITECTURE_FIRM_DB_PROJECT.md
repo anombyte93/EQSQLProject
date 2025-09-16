@@ -73,10 +73,52 @@ This four-phase workshop series guides university students through the complete 
 
 ---
 
+## Workshop Design Philosophy — IMPORTANT FOR ALL PHASES
+
+### Self-Sufficient Learning Principles
+Each workshop phase MUST be designed for completely autonomous learning:
+
+1. **Explain Before Execute**: Every command must have:
+   - WHAT it does (plain English explanation)
+   - WHY we're doing it (business/technical justification)
+   - HOW it works (technical breakdown)
+   - WHAT TO EXPECT (expected output/errors)
+   - COMMON MISTAKES (with fixes)
+
+2. **Conceptual Foundation First**: Before any hands-on work:
+   - Explain the theory and concepts
+   - Use analogies and real-world examples
+   - Include diagrams where helpful
+   - Define all technical terms on first use
+
+3. **Progressive Disclosure**:
+   - Start with simplified explanations
+   - Add complexity gradually
+   - Reference back to earlier concepts
+   - Build mental models step by step
+
+4. **Active Learning Elements**:
+   - "Think About It" boxes before revealing answers
+   - "Try It Yourself" challenges with hints
+   - "What Would Happen If..." scenarios
+   - Common misconceptions addressed proactively
+
+5. **Troubleshooting Integration**:
+   - Every section includes "If This Doesn't Work" boxes
+   - Common error messages explained
+   - Multiple approaches to solve problems
+   - Verification steps after each major task
+
 ## Phase 1: Foundations — Core Schema & CRUD Operations
 
 ### Overview
 Students establish the fundamental database structure for ArchitectPro, implementing core tables for clients, projects, and employees. Focus on normalization, constraints, and basic query patterns while establishing backup and monitoring practices.
+
+**CRITICAL**: This phase must include extensive explanations of database fundamentals, not just commands to run. Students should understand:
+- What a database is and why we need it vs spreadsheets
+- How tables relate to each other conceptually
+- What each SQL command actually does behind the scenes
+- Why each security/backup practice matters with real examples
 
 ### Schema Design
 ```sql
@@ -128,40 +170,74 @@ employees (
 2. **Basic Queries**: SELECT with WHERE, ORDER BY, LIMIT/OFFSET pagination
 3. **Joins**: INNER JOIN for active projects, LEFT JOIN for clients without projects
 4. **Aggregations**: COUNT projects by type, AVG budget by client, SUM salaries by department
-5. **Backup Lab**: Create backup script, test restore to new database, automate with cron
+5. **Backup & Restore Lab**: Create backup script with pg_dump, test pg_restore to new database, automate with cron job
+6. **Aliases & Productivity**: Configure \set shortcuts in psql, create .psqlrc file, shell aliases for common commands
+7. **Monitoring Basics**: Use pg_stat_activity for current connections, pg_stat_statements for query performance, table size monitoring
 
 ### Security Implementation
 - Create read-only role for reporting
 - Implement connection limits per user
 - Enable SSL connections
 - Configure pg_hba.conf for network restrictions
+- Demonstrate SQL injection prevention with parameterized queries
 
 ### Monitoring Setup
 ```sql
--- Query performance baseline
+-- Current database activity
+SELECT pid, usename, datname, state, query_start,
+       SUBSTRING(query, 1, 50) as current_query
+FROM pg_stat_activity
+WHERE state != 'idle';
+
+-- Query performance baseline (requires pg_stat_statements)
 SELECT query, calls, mean_exec_time, max_exec_time
 FROM pg_stat_statements
 ORDER BY mean_exec_time DESC LIMIT 10;
 
 -- Connection monitoring
-SELECT datname, count(*)
+SELECT datname, count(*),
+       ROUND(100.0 * count(*) / (SELECT setting::int FROM pg_settings WHERE name = 'max_connections'), 2) as percent_used
 FROM pg_stat_activity
 GROUP BY datname;
 
 -- Table sizes and bloat
-SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename))
+SELECT schemaname, tablename,
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+       pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+       pg_size_pretty(pg_indexes_size(schemaname||'.'||tablename)) as indexes_size
 FROM pg_tables
+WHERE schemaname = 'public'
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 ```
+
+### Compliance Awareness
+Students learn to identify and handle sensitive data according to industry standards:
+- **PII Identification**: Recognize emails, phone numbers, addresses as personally identifiable information
+- **GDPR Principles**: Understand data minimization, purpose limitation, retention limits
+- **ISO 27001 Context**: Introduction to information security management systems
+- **Data Classification**: Categorize data by sensitivity (Public, Internal, Confidential, Restricted)
+- **Audit Requirements**: Why we log data access and changes
 
 ### Deliverables
 - [ ] Complete schema with constraints and indexes
 - [ ] 50+ rows of realistic seed data
 - [ ] 10 CRUD queries demonstrating all operations
-- [ ] Backup script with automated scheduling
-- [ ] Monitoring queries saved as views
+- [ ] Verified backup/restore procedure with automated scheduling
+- [ ] At least one working psql alias or .psqlrc configuration
+- [ ] One monitoring query result demonstrating database activity
+- [ ] Monitoring queries saved as views for ongoing use
+- [ ] Data classification matrix identifying PII and sensitive fields
 - [ ] README.md with ERD and setup instructions
-- [ ] Reflection paper (500 words) on normalization decisions
+- [ ] Reflection paper (500 words) on normalization decisions and compliance considerations
+
+### Phase 2 Preview
+Phase 2 builds directly on these foundations with:
+- **Advanced Relationships**: Junction tables (project_assignments), many-to-many relationships
+- **Role-Based Access Control (RBAC)**: Multiple user roles with granular permissions
+- **Complex JOINs**: Multi-table queries, subqueries, CTEs, window functions
+- **SQL Injection Prevention**: Hands-on lab with vulnerable vs secure code
+- **Query Optimization**: Using EXPLAIN ANALYZE, index strategies, performance tuning
+- **Audit Logging**: Complete change tracking with triggers and JSONB storage
 
 ### Claude Intuition Extras
 - Add UUID columns for external API integration
